@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Check-in</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f3;
+    --bg3: #efefed;
+    --bg-info: #e6f1fb;
+    --bg-success: #eaf3de;
+    --bg-warning: #faeeda;
+    --bg-danger: #fcebeb;
+    --text: #1a1a1a;
+    --text2: #6b6b68;
+    --text3: #9e9e9a;
+    --text-info: #185fa5;
+    --text-success: #3b6d11;
+    --text-warning: #854f0b;
+    --text-danger: #a32d2d;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --border-info: rgba(24,95,165,0.4);
+    --border-success: rgba(59,109,17,0.4);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c;
+      --bg2: #2a2a28;
+      --bg3: #313130;
+      --bg-info: #0c2a45;
+      --bg-success: #172d07;
+      --bg-warning: #2e1c04;
+      --bg-danger: #2e0f0f;
+      --text: #e8e8e4;
+      --text2: #a0a09c;
+      --text3: #6a6a66;
+      --text-info: #85b7eb;
+      --text-success: #97c459;
+      --text-warning: #ef9f27;
+      --text-danger: #f09595;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.2);
+      --border-info: rgba(133,183,235,0.4);
+      --border-success: rgba(151,196,89,0.4);
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+  .app { max-width: 580px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 0.25rem; }
+  .subtitle { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+  .month-nav { display: flex; align-items: center; gap: 10px; }
+  .nav-btn { background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 6px 14px; cursor: pointer; font-size: 14px; color: var(--text); }
+  .nav-btn:hover { background: var(--bg2); }
+  .month-title { font-size: 17px; font-weight: 500; min-width: 160px; text-align: center; }
+  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 1.5rem; }
+  .cal-header { font-size: 11px; color: var(--text3); text-align: center; padding: 4px 0; font-weight: 500; letter-spacing: 0.05em; }
+  .cal-day { aspect-ratio: 1; border: 0.5px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; gap: 2px; transition: background 0.1s, border-color 0.1s; }
+  .cal-day:hover { border-color: var(--border2); background: var(--bg2); }
+  .cal-day.empty { border-color: transparent; cursor: default; pointer-events: none; }
+  .cal-day.today { border-color: var(--border-info); }
+  .cal-day.selected { border-color: var(--border-info); background: var(--bg-info); }
+  .cal-day.has-entry { background: var(--bg2); }
+  .day-num { font-size: 13px; font-weight: 500; line-height: 1; }
+  .cal-day.today .day-num, .cal-day.selected .day-num { color: var(--text-info); }
+  .dot-row { display: flex; gap: 2px; }
+  .dot { width: 4px; height: 4px; border-radius: 50%; }
+  .dot.habit { background: var(--text-warning); }
+  .dot.sleep { background: var(--text-info); }
+  .dot.mood  { background: var(--text-success); }
+  .panel { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .panel-title { font-size: 11px; font-weight: 500; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; }
+  .date-label { font-size: 14px; font-weight: 500; }
+  .habit-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+  .habit-row:not(:last-child) { border-bottom: 0.5px solid var(--border); }
+  .habit-check { width: 20px; height: 20px; border-radius: 6px; border: 0.5px solid var(--border2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.12s; }
+  .habit-check.done { background: var(--bg-success); border-color: var(--border-success); }
+  .habit-check.done::after { content: ''; display: block; width: 5px; height: 9px; border-right: 1.5px solid var(--text-success); border-bottom: 1.5px solid var(--text-success); transform: rotate(45deg) translateY(-1px); }
+  .habit-label { font-size: 14px; flex: 1; }
+  .habit-label.done { color: var(--text2); text-decoration: line-through; }
+  .del-btn { font-size: 11px; color: var(--text3); cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .del-btn:hover { color: var(--text-danger); background: var(--bg-danger); }
+  .add-row { display: flex; gap: 8px; margin-top: 10px; }
+  .add-row input { flex: 1; font-size: 13px; padding: 7px 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg2); color: var(--text); outline: none; }
+  .add-row input:focus { border-color: var(--border2); }
+  .add-row button { font-size: 13px; padding: 7px 14px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: transparent; color: var(--text); cursor: pointer; }
+  .add-row button:hover { background: var(--bg2); }
+  .sleep-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .sleep-lbl { font-size: 13px; color: var(--text2); width: 64px; flex-shrink: 0; }
+  .sleep-row input[type=time] { font-size: 14px; padding: 7px 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg2); color: var(--text); outline: none; }
+  .sleep-row input:focus { border-color: var(--border2); }
+  .sleep-dur { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .sleep-dur span { font-weight: 500; color: var(--text); }
+  .mood-grid { display: flex; gap: 6px; }
+  .mood-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border: 0.5px solid var(--border); border-radius: var(--radius); background: transparent; cursor: pointer; transition: background 0.1s; }
+  .mood-btn:hover { background: var(--bg2); }
+  .mood-btn.sel { background: var(--bg-info); border-color: var(--border-info); }
+  .mood-icon { font-size: 20px; line-height: 1; }
+  .mood-text { font-size: 11px; color: var(--text2); }
+  .mood-btn.sel .mood-text { color: var(--text-info); font-weight: 500; }
+  textarea { width: 100%; font-size: 13px; padding: 10px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg2); color: var(--text); outline: none; resize: vertical; min-height: 72px; font-family: inherit; line-height: 1.5; }
+  textarea:focus { border-color: var(--border2); }
+  .save-bar { display: flex; align-items: center; justify-content: space-between; }
+  .save-btn { font-size: 14px; font-weight: 500; padding: 9px 28px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); cursor: pointer; }
+  .save-btn:hover { background: var(--bg2); }
+  .save-ok { font-size: 12px; color: var(--text-success); opacity: 0; transition: opacity 0.3s; }
+  .save-ok.show { opacity: 1; }
+  .no-day { text-align: center; color: var(--text3); font-size: 14px; padding: 2.5rem 0; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Daily check-in</h1>
+  <p class="subtitle">Track your habits, sleep, and mood — every day of the month.</p>
+
+  <div class="top-bar">
+    <div class="month-nav">
+      <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
+      <div class="month-title" id="monthTitle"></div>
+      <button class="nav-btn" onclick="changeMonth(1)">&#8594;</button>
+    </div>
+  </div>
+
+  <div class="calendar" id="calendar"></div>
+  <div id="entryPanel"></div>
+</div>
+
+<script>
+const HABITS_KEY = 'mct_habits';
+const MOODS = [{icon:'😔',label:'Rough'},{icon:'😕',label:'Low'},{icon:'😐',label:'Okay'},{icon:'🙂',label:'Good'},{icon:'😄',label:'Great'}];
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+const now = new Date();
+let viewYear = now.getFullYear();
+let viewMonth = now.getMonth();
+let selectedDay = now.getDate();
+let _currentHabits = [];
+let _selectedMood = null;
+
+function todayStr() { return fmtDate(now.getFullYear(), now.getMonth(), now.getDate()); }
+function fmtDate(y,m,d) { return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function entryKey(ds) { return 'mct_entry_' + ds; }
+function getHabits() { try { return JSON.parse(localStorage.getItem(HABITS_KEY)) || ['Exercise','Read','Meditate']; } catch(e) { return ['Exercise','Read','Meditate']; } }
+function saveHabits(h) { localStorage.setItem(HABITS_KEY, JSON.stringify(h)); }
+function getEntry(ds) { try { return JSON.parse(localStorage.getItem(entryKey(ds))) || {}; } catch(e) { return {}; } }
+function saveEntry(ds, e) { localStorage.setItem(entryKey(ds), JSON.stringify(e)); }
+function hasEntry(ds) { const e = getEntry(ds); return e.mood != null || e.bedtime || (e.habits && e.habits.some(h=>h.done)) || e.notes; }
+
+function changeMonth(dir) {
+  viewMonth += dir;
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  selectedDay = null;
+  renderCalendar();
+  renderPanel();
+}
+
+function renderCalendar() {
+  document.getElementById('monthTitle').textContent = new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', {month:'long', year:'numeric'});
+  const cal = document.getElementById('calendar');
+  cal.innerHTML = '';
+  DAYS.forEach(d => { const h = document.createElement('div'); h.className = 'cal-header'; h.textContent = d; cal.appendChild(h); });
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) { const el = document.createElement('div'); el.className = 'cal-day empty'; cal.appendChild(el); }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = fmtDate(viewYear, viewMonth, d);
+    const entry = getEntry(ds);
+    const hasMood = entry.mood != null;
+    const hasSleep = !!entry.bedtime;
+    const hasHabit = entry.habits && entry.habits.some(h=>h.done);
+    const el = document.createElement('div');
+    el.className = 'cal-day' + (ds === todayStr() ? ' today' : '') + (selectedDay === d ? ' selected' : '') + (hasEntry(ds) ? ' has-entry' : '');
+    let dots = '';
+    if (hasHabit || hasSleep || hasMood) {
+      dots = '<div class="dot-row">';
+      if (hasHabit) dots += '<div class="dot habit"></div>';
+      if (hasSleep) dots += '<div class="dot sleep"></div>';
+      if (hasMood) dots += '<div class="dot mood"></div>';
+      dots += '</div>';
+    }
+    el.innerHTML = `<span class="day-num">${d}</span>${dots}`;
+    el.onclick = () => selectDay(d);
+    cal.appendChild(el);
+  }
+}
+
+function selectDay(d) { selectedDay = d; renderCalendar(); renderPanel(); }
+
+function renderPanel() {
+  const panel = document.getElementById('entryPanel');
+  if (!selectedDay) { panel.innerHTML = '<div class="no-day">Select a day to log your check-in</div>'; return; }
+  const ds = fmtDate(viewYear, viewMonth, selectedDay);
+  const entry = getEntry(ds);
+  const habits = getHabits();
+  _currentHabits = habits.map(name => { const eh = entry.habits ? entry.habits.find(h=>h.name===name) : null; return { name, done: eh ? eh.done : false }; });
+  _selectedMood = entry.mood != null ? entry.mood : null;
+  const dateLabel = new Date(viewYear, viewMonth, selectedDay).toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+  panel.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Habits</div>
+        <div class="date-label">${dateLabel}</div>
+      </div>
+      <div id="habitList"></div>
+      <div class="add-row">
+        <input type="text" id="habitInput" placeholder="Add a habit..." maxlength="40" />
+        <button onclick="addHabit()">Add</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" style="margin-bottom:1rem">Sleep</div>
+      <div class="sleep-row"><span class="sleep-lbl">Bedtime</span><input type="time" id="bedtime" value="${entry.bedtime||''}" onchange="calcSleep()" /></div>
+      <div class="sleep-row"><span class="sleep-lbl">Wake up</span><input type="time" id="waketime" value="${entry.waketime||''}" onchange="calcSleep()" /></div>
+      <div class="sleep-dur" id="sleepDur"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" style="margin-bottom:1rem">Mood</div>
+      <div class="mood-grid" id="moodGrid"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" style="margin-bottom:0.75rem">Notes</div>
+      <textarea id="notes" placeholder="How did today go?">${entry.notes||''}</textarea>
+    </div>
+    <div class="save-bar">
+      <button class="save-btn" onclick="saveDay()">Save</button>
+      <span class="save-ok" id="saveOk">Saved</span>
+    </div>
+  `;
+  renderHabits();
+  renderMoods();
+  calcSleep();
+  document.getElementById('habitInput').addEventListener('keydown', e => { if(e.key==='Enter') addHabit(); });
+}
+
+function renderHabits() {
+  const list = document.getElementById('habitList');
+  if (!list) return;
+  list.innerHTML = '';
+  _currentHabits.forEach((h, i) => {
+    const row = document.createElement('div');
+    row.className = 'habit-row';
+    row.innerHTML = `<div class="habit-check ${h.done?'done':''}" onclick="toggleHabit(${i})"></div><span class="habit-label ${h.done?'done':''}">${h.name}</span><span class="del-btn" onclick="removeHabit(${i})">remove</span>`;
+    list.appendChild(row);
+  });
+}
+
+function toggleHabit(i) { _currentHabits[i].done = !_currentHabits[i].done; renderHabits(); }
+
+function addHabit() {
+  const inp = document.getElementById('habitInput');
+  const name = inp.value.trim();
+  if (!name) return;
+  const habits = getHabits(); habits.push(name); saveHabits(habits);
+  _currentHabits.push({ name, done: false });
+  inp.value = '';
+  renderHabits();
+}
+
+function removeHabit(i) {
+  const name = _currentHabits[i].name;
+  _currentHabits.splice(i, 1);
+  saveHabits(getHabits().filter(n => n !== name));
+  renderHabits();
+}
+
+function renderMoods() {
+  const grid = document.getElementById('moodGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  MOODS.forEach((m, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'mood-btn' + (_selectedMood === i ? ' sel' : '');
+    btn.innerHTML = `<span class="mood-icon">${m.icon}</span><span class="mood-text">${m.label}</span>`;
+    btn.onclick = () => { _selectedMood = _selectedMood === i ? null : i; renderMoods(); };
+    grid.appendChild(btn);
+  });
+}
+
+function calcSleep() {
+  const b = document.getElementById('bedtime'), w = document.getElementById('waketime'), dur = document.getElementById('sleepDur');
+  if (!b || !w || !dur) return;
+  if (b.value && w.value) {
+    const [bh,bm] = b.value.split(':').map(Number), [wh,wm] = w.value.split(':').map(Number);
+    let mins = (wh*60+wm)-(bh*60+bm);
+    if (mins < 0) mins += 1440;
+    dur.innerHTML = `Duration: <span>${Math.floor(mins/60)}h ${mins%60}m</span>`;
+  } else { dur.innerHTML = ''; }
+}
+
+function saveDay() {
+  const ds = fmtDate(viewYear, viewMonth, selectedDay);
+  saveEntry(ds, { habits: _currentHabits, bedtime: document.getElementById('bedtime').value, waketime: document.getElementById('waketime').value, mood: _selectedMood, notes: document.getElementById('notes').value });
+  renderCalendar();
+  const ok = document.getElementById('saveOk');
+  ok.classList.add('show');
+  setTimeout(() => ok.classList.remove('show'), 2000);
+}
+
+renderCalendar();
+renderPanel();
+</script>
+</body>
+</html>
